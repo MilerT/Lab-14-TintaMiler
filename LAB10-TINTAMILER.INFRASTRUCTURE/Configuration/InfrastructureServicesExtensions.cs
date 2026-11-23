@@ -22,8 +22,19 @@ public static class InfrastructureServicesExtensions
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
         // 1. Configuración de Base de Datos PostgreSQL con Entity Framework Core
-        var connectionString = configuration.GetConnectionString("DefaultConnection") 
-            ?? "Host=localhost;Database=ticketera_db;Username=postgres;Password=aL955TEC5698";
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            // Render suministra las variables PG* mediante referencias a su base privada.
+            connectionString = new Npgsql.NpgsqlConnectionStringBuilder
+            {
+                Host = configuration["PGHOST"] ?? "localhost",
+                Port = int.TryParse(configuration["PGPORT"], out var port) ? port : 5432,
+                Database = configuration["PGDATABASE"] ?? "ticketera_db",
+                Username = configuration["PGUSER"],
+                Password = configuration["PGPASSWORD"]
+            }.ConnectionString;
+        }
 
         services.AddDbContext<TicketeraDbContext>(options =>
             options.UseNpgsql(connectionString));

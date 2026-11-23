@@ -1,46 +1,62 @@
-name: Build and Deploy .NET Application
-
+name: Publicación de la Ticketera
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-    name: Build, Test & Publish .NET Clean Architecture App
+  publicar:
     runs-on: ubuntu-latest
-
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: ticketera_lab
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['127.0.0.1:5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 12
     steps:
-    - name: Check out repository code
-      uses: actions/checkout@v4
-
-    - name: Set up .NET SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: |
-          8.0.x
-          10.0.x
-
-    - name: Restore dependencies
-      run: dotnet restore LAB10-TINTAMILER.sln
-
-    - name: Build application (Release mode)
-      run: dotnet build LAB10-TINTAMILER.sln --configuration Release --no-restore
-
-    - name: Publish application
-      run: dotnet publish LAB10-TINTAMILER.API/LAB10-TINTAMILER.API.csproj --configuration Release --output ./published --no-build
-
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dotnet-published-app
-        path: ./published/
-        retention-days: 7
-
-    - name: Log Deployment Readiness
-      run: |
-        echo "=== VERIFICACIÓN DE PUBLICACIÓN COMPLETADA ==="
-        echo "Artefactos compilados listos para despliegue en Render."
-        ls -la ./published
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+      - name: Restaurar dependencias
+        run: dotnet restore LAB10-TINTAMILER.sln
+      - name: Compilar las cuatro capas
+        run: dotnet build LAB10-TINTAMILER.sln -c Release --no-restore
+      - name: Ejecutar los proyectos de pruebas de la solución
+        run: dotnet test LAB10-TINTAMILER.sln -c Release --no-build
+      - name: Publicar la API
+        run: dotnet publish LAB10-TINTAMILER.API -c Release -f net8.0 --no-build -o published/net8.0
+      - name: Probar HTTP y PostgreSQL
+        env:
+          ConnectionStrings__DefaultConnection: Host=localhost;Database=ticketera_lab;Username=postgres
+        run: |
+          set -euo pipefail
+          psql -h localhost -U postgres -d ticketera_lab -v ON_ERROR_STOP=1 -f TicketeraBD.sql
+          export JwtSettings__SecretKey="$(openssl rand -hex 48)"
+          dotnet published/net8.0/LAB10-TINTAMILER.API.dll --urls http://127.0.0.1:5088 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          base=http://127.0.0.1:5088
+          curl -fsS --retry 20 --retry-delay 1 --retry-connrefused "$base/health" | jq -e '.status == "Healthy" and .application == "LAB10-TINTAMILER.API"'
+          curl -fsS "$base/swagger/v1/swagger.json" | jq -e '.paths | has("/api/Tickets") or has("/api/tickets")'
+          test "$(curl -s -o /dev/null -w '%{http_code}' "$base/api/tickets")" = 401
+          curl -fsS "$base/api/reports/users-with-tickets" -o "$RUNNER_TEMP/usuarios.xlsx"
+          unzip -t "$RUNNER_TEMP/usuarios.xlsx"
+          curl -fsS "$base/api/reports/first-example" -o "$RUNNER_TEMP/reporte.xlsx"
+          unzip -t "$RUNNER_TEMP/reporte.xlsx"
+      - name: Guardar publicación
+        uses: actions/upload-artifact@v7
+        with:
+          name: ticketera-net8-release
+          path: published/net8.0/
+          if-no-files-found: error
+          retention-days: 7

@@ -26,3 +26,8 @@ desktop.ini
 *.log
 __pycache__/
 *.pyc
+
+# Archivos de bloqueo de Office y configuración local
+~$*
+.env
+.env.*

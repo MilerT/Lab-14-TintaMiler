@@ -8,5 +8,34 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
-      - key: ASPNETCORE_ENVIRONMENT
-        value: Production
+      - key: Ticketera__InitializeSchema
+        value: "true"
+      - key: JwtSettings__SecretKey
+        generateValue: true
+      - key: PGHOST
+        fromDatabase:
+          name: ticketera-lab14
+          property: host
+      - key: PGPORT
+        fromDatabase:
+          name: ticketera-lab14
+          property: port
+      - key: PGUSER
+        fromDatabase:
+          name: ticketera-lab14
+          property: user
+      - key: PGPASSWORD
+        fromDatabase:
+          name: ticketera-lab14
+          property: password
+      - key: PGDATABASE
+        fromDatabase:
+          name: ticketera-lab14
+          property: database
+databases:
+  - name: ticketera-lab14
+    databaseName: ticketera_lab
+    user: ticketera
+    plan: free
+    region: oregon
+    ipAllowList: []

@@ -55,7 +55,7 @@ public static class ServiceRegistrationExtensions
         });
 
         // 3. Configuración de Autenticación JWT Bearer
-        var secretKey = configuration["JwtSettings:SecretKey"] ?? "SuperSecretKeyForTicketeraLab10TecsupEnterpriseApplication2026!";
+        var secretKey = configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("Configure JwtSettings__SecretKey o el secreto de usuario correspondiente.");
         var issuer = configuration["JwtSettings:Issuer"] ?? "TicketeraAPI";
         var audience = configuration["JwtSettings:Audience"] ?? "TicketeraUsers";
 

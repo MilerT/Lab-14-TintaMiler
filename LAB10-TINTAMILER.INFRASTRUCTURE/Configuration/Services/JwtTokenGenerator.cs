@@ -19,7 +19,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public (string Token, DateTime Expiration) GenerateToken(User user, IEnumerable<string> roles)
     {
-        var secretKey = _configuration["JwtSettings:SecretKey"] ?? "SuperSecretKeyForTicketeraLab10TecsupEnterpriseApplication2026!";
+        var secretKey = _configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("Configure JwtSettings__SecretKey o el secreto de usuario correspondiente.");
         var issuer = _configuration["JwtSettings:Issuer"] ?? "TicketeraAPI";
         var audience = _configuration["JwtSettings:Audience"] ?? "TicketeraUsers";
         var durationHours = double.TryParse(_configuration["JwtSettings:DurationInHours"], out var hours) ? hours : 8;

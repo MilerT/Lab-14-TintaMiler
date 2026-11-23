@@ -1,12 +1,12 @@
 
 -- Tabla Roles
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     role_id UUID PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL UNIQUE
 );
 
 -- Tabla Usuarios
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id UUID PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE users (
 );
 
 -- Tabla pivote para asignar roles a usuarios (muchos a muchos)
-CREATE TABLE user_roles (
+CREATE TABLE IF NOT EXISTS user_roles (
     user_id UUID NOT NULL,
     role_id UUID NOT NULL,
     assigned_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
@@ -25,7 +25,7 @@ CREATE TABLE user_roles (
 );
 
 -- Tabla Tickets
-CREATE TABLE tickets (
+CREATE TABLE IF NOT EXISTS tickets (
     ticket_id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     title VARCHAR(255) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE tickets (
 );
 
 -- Tabla Respuestas
-CREATE TABLE responses (
+CREATE TABLE IF NOT EXISTS responses (
     response_id UUID PRIMARY KEY,
     ticket_id UUID NOT NULL,
     responder_id UUID NOT NULL,

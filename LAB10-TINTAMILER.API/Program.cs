@@ -43,4 +43,5 @@ app.MapGet("/health", () => Results.Ok(new
 
 app.MapControllers();
 
+await app.InitializeTicketeraAsync();
 app.Run();

@@ -1,270 +1,334 @@
-# INFORME DE LABORATORIO N° 14
-## PUBLICACIÓN EN .NET, CI/CD CON GITHUB ACTIONS Y DESPLIEGUE EN RENDER
-### PROYECTO: LAB10-TINTAMILER (Clean Architecture + CQRS MediatR)
+# Laboratorio 14 · Publicación de la API de tickets LAB10-TINTAMILER
 
----
+**TECSUP · Tecnología Digital · Desarrollo de Software**
 
-### INFORMACIÓN ACADÉMICA Y METADATOS
-* **Institución:** TECSUP
-* **Departamento:** Tecnología Digital — C24 Desarrollo de Software
-* **Curso:** Desarrollo de Aplicaciones Empresariales Avanzadas
-* **Laboratorio:** Laboratorio 14 — Publicación, CI/CD con GitHub Actions y Despliegue en Render
-* **Proyecto Implementado:** LAB10-TINTAMILER (Ticketera API — Clean Architecture)
-* **Estudiante:** Miler Andre Tinta Quispe
-* **Sección:** 6C24-B (6to Ciclo)
-* **Docente:** Ing. Jhordan Leonardo Mayhua Ubillas
-* **Sistema Operativo del Entorno:** Windows 11 Enterprise (x64)
-* **Terminal Utilizada:** Windows PowerShell
-* **Fecha:** 22 de Noviembre de 2026
-* **Repositorio Oficial en GitHub:** [https://github.com/MilerT/Lab-14-TintaMiler](https://github.com/MilerT/Lab-14-TintaMiler)
+Curso de Desarrollo de Aplicaciones Empresariales Avanzadas. Estudiante Miler Andre Tinta Quispe, sección 6C24-B. Docente Ing. Jhordan Leonardo Mayhua Ubillas. Lima, 22 de noviembre de 2026.
 
----
+[Informe en PDF](INFORME-LABORATORIO-14.pdf) · [Informe en Word](INFORME-LABORATORIO-14-VERIFICADO.docx) · [Índice de las 38 capturas](evidencias/INDICE.md)
 
-## 1. INTRODUCCIÓN
-En el presente laboratorio se aborda la industrialización del despliegue de una solución empresarial real: **LAB10-TINTAMILER**, desarrollada con los patrones **Clean Architecture**, **CQRS** y **MediatR** en C#.
+## Introducción
 
-Se cubre el ciclo completo de operaciones DevOps y publicación:
-1. Publicación manual local en modo Release utilizando la CLI de .NET y perfiles Folder en entorno nativo **Windows 11**.
-2. Configuración y automatización del pipeline de Integración Continua (CI) mediante **GitHub Actions**, compilando la solución multicapa y resguardando artefactos.
-3. Contenedorización multi-stage con **Docker** y puesta en producción en la plataforma en la nube **Render**, incluyendo observabilidad mediante el endpoint `/health` y la documentación interactiva de Swagger UI.
+La Ticketera reúne autenticación, gestión de tickets y reportes Excel en una API de ASP.NET Core. El laboratorio siguió esa misma solución desde la compilación en Windows hasta su ejecución pública en Render. El identificador de Git permitió relacionar el código local con las pruebas de GitHub y el contenedor desplegado.
 
----
+## Objetivos
 
-## 2. OBJETIVOS
-1. **Publicar la solución empresarial multicapa LAB10-TINTAMILER** de manera manual optimizada en modo Release.
-2. **Automatizar el ciclo de Integración Continua (CI)** con GitHub Actions para validar y compilar las 4 capas del proyecto ante cada push a la rama principal `main`.
-3. **Contenedorizar y desplegar la API en Render** mediante Docker multi-stage con soporte de puerto dinámico y sondeos de salud continuos.
-4. **Analizar la trazabilidad, seguridad y beneficios de la automatización CI/CD** frente a los métodos de copia manual tradicionales.
+1. Publicar en una carpeta local una versión Release que cargue las cuatro capas de la Ticketera en .NET 8.
+2. Automatizar la compilación y comprobar el comportamiento HTTP del paquete publicado frente a PostgreSQL.
+3. Desplegar la imagen en Render y verificar por HTTPS la documentación, la disponibilidad y la descarga de reportes.
 
----
+## Herramientas y evidencias
 
-## 3. EQUIPOS, MATERIALES Y MEDIDAS DE SEGURIDAD
-### 3.1 Equipos y Software Utilizado
-* **Sistema Operativo:** Windows 11 Enterprise (x64).
-* **Terminal:** Windows PowerShell (Microsoft Corporation).
-* **Entornos de Desarrollo:** JetBrains Rider y Visual Studio 2022.
-* **SDK de .NET:** .NET SDK 10.0.400 / 8.0.424 y Runtimes correspondientes.
-* **Control de Versiones:** Git 2.55.0 para Windows y GitHub.
-* **Plataforma Cloud:** Render PaaS para ejecución de contenedores Docker.
-* **Navegador:** Google Chrome para Windows.
+Windows, Rider, PowerShell, SDK .NET 8.0.424, NuGet, Git, GitHub Actions, Docker Desktop, Render, PostgreSQL 18 y Chrome. Las capturas muestran Rider, páginas reales del navegador y sesiones de PowerShell ejecutadas en una terminal web local. Los registros de CI proceden del runner de GitHub y los del despliegue se consultaron con el CLI oficial de Render.
 
-### 3.2 Normas de Seguridad
-* Cumplimiento estricto del reglamento de laboratorios de cómputo de TECSUP.
-* Resguardo de credenciales: no inclusión de llaves privadas SSH, tokens de acceso ni cadenas de conexión con contraseñas en repositorios públicos.
+## Parte 1 · Publicación manual
 
----
+La solución abierta en Rider contiene API, Application, Domain e Infrastructure. Los cuatro proyectos se ajustaron a net8.0 y global.json seleccionó el SDK 8.0.424 instalado en Windows. Las dependencias de autenticación y el proveedor de PostgreSQL se alinearon con ese destino.
 
-## 4. PROCEDIMIENTO EXPERIMENTAL Y EVIDENCIAS TÉCNICAS (WINDOWS 11)
+Se restauraron los paquetes NuGet y se compiló Release. Kestrel atendió en el puerto 5088 y Swagger presentó los controladores de autenticación, tickets y reportes. El perfil FolderProfile se aplicó desde la CLI y escribió en published/net8.0.
 
-A continuación se presentan las **37 capturas reales** tomadas en entorno Windows 11, organizadas cronológicamente en las tres partes del procedimiento.
+Se revisaron los ensamblados y el manifiesto de runtime. Una segunda instancia arrancó desde la carpeta publicada en el puerto 5090. El sondeo de salud devolvió Healthy y una solicitud sin credenciales a los tickets recibió HTTP 401.
 
-```
-docs/evidencias/
-├── parte-1-publicacion/       (12 capturas Windows 11)
-├── parte-2-github-actions/    (13 capturas Windows 11)
-└── parte-3-render/            (12 capturas Windows 11)
+```text
+dotnet restore LAB10-TINTAMILER.sln
+dotnet build LAB10-TINTAMILER.sln -c Release --no-restore
+dotnet run -c Release --no-build --project LAB10-TINTAMILER.API --launch-profile http
+dotnet publish LAB10-TINTAMILER.API -c Release -f net8.0 -p:PublishProfile=FolderProfile
 ```
 
----
+### 01. Estructura de la solución
 
-### PARTE 1: PUBLICACIÓN MANUAL DE ARCHIVOS EN WINDOWS 11
+![Estructura de la solución](evidencias/parte-1-publicacion/01-solucion-y-capas.png)
 
-#### Evidencia 01: Estructura del Proyecto LAB10-TINTAMILER
-Visualización en Windows PowerShell de la solución `LAB10-TINTAMILER.sln` con sus proyectos `API`, `APPLICATION`, `DOMAIN` e `INFRASTRUCTURE`.
-![Estructura Inicial](evidencias/parte-1-publicacion/01-estructura-inicial-proyecto.png)
+dotnet sln enumeró los cuatro proyectos que componen la Ticketera.
 
-#### Evidencia 02: Versión instalada de .NET en Windows 11
-Comprobación mediante `dotnet --version`, `dotnet --list-sdks` y `dotnet --list-runtimes` en Windows PowerShell.
-![Versión de .NET](evidencias/parte-1-publicacion/02-version-instalada-dotnet.png)
+### 02. SDK y runtimes instalados
 
-#### Evidencia 03: Proyecto abierto en el editor de código
-Inspección de `LAB10-TINTAMILER.API/Program.cs` en el editor, configurando puerto dinámico, Swagger UI en la raíz y `/health`.
-![Proyecto en Editor](evidencias/parte-1-publicacion/03-proyecto-abierto-editor.png)
+![SDK y runtimes instalados](evidencias/parte-1-publicacion/02-sdk-y-runtime.png)
 
-#### Evidencia 04: Restauración de dependencias de la solución
-Ejecución de `dotnet restore LAB10-TINTAMILER.sln` restaurando los paquetes NuGet de las 4 capas del proyecto.
-![Restauración Dependencias](evidencias/parte-1-publicacion/04-restauracion-dependencias.png)
+La terminal muestra el SDK seleccionado y las versiones de ASP.NET Core y .NET disponibles.
 
-#### Evidencia 05: Compilación optimizada en modo Release
-Compilación exitosa con `dotnet build LAB10-TINTAMILER.sln --configuration Release` con 0 errores y 0 advertencias.
-![Compilación Exitosa](evidencias/parte-1-publicacion/05-compilacion-exitosa.png)
+### 03. Solución abierta en Rider
 
-#### Evidencia 06: Aplicación ejecutándose localmente en Kestrel
-Servidor web Kestrel iniciado en Windows PowerShell escuchando en `http://localhost:5088`.
-![Ejecución Local](evidencias/parte-1-publicacion/06-aplicacion-ejecutandose-localmente.png)
+![Solución abierta en Rider](evidencias/parte-1-publicacion/03-solucion-en-rider.png)
 
-#### Evidencia 07: Swagger UI en navegador web
-Acceso a `http://localhost:5088/` mostrando la interfaz interactiva de Swagger UI para la Ticketera API (endpoints de Auth, Login, Register, Tickets y Reportes).
-![Swagger UI](evidencias/parte-1-publicacion/07-pagina-principal-navegador.png)
+El editor muestra ExcelReportService y el árbol de la solución original.
 
-#### Evidencia 08: Configuración del perfil de publicación Folder
-Perfil `FolderProfile.pubxml` en `LAB10-TINTAMILER.API/Properties/PublishProfiles/` configurado para salida en `../published/`.
-![Perfil de Publicación](evidencias/parte-1-publicacion/08-configuracion-publicacion-folder.png)
+### 04. Restauración de NuGet
 
-#### Evidencia 09: Ejecución del comando dotnet publish
-Comando CLI `dotnet publish LAB10-TINTAMILER.API\LAB10-TINTAMILER.API.csproj --configuration Release --output ./published` en Windows PowerShell.
-![Publicación Release](evidencias/parte-1-publicacion/09-publicacion-release.png)
+![Restauración de NuGet](evidencias/parte-1-publicacion/04-restaurar-dependencias.png)
 
-#### Evidencia 10: Carpeta de archivos publicados en el sistema de archivos
-Listado con `Get-ChildItem -Path ./published` verificando la presencia de ensamblados y configuraciones.
-![Carpeta Publicada](evidencias/parte-1-publicacion/10-carpeta-archivos-publicados.png)
+La restauración forzada resolvió las dependencias de las cuatro capas.
 
-#### Evidencia 11: Detalle de ensamblados Clean Architecture en ./published
-Estructura detallada de DLLs generadas: `API.dll`, `APPLICATION.dll`, `DOMAIN.dll`, `INFRASTRUCTURE.dll`, `API.exe` y `web.config`.
-![Detalle Ensamblados](evidencias/parte-1-publicacion/11-contenido-carpeta-publicada.png)
+### 05. Compilación en Release
 
-#### Evidencia 12: Verificación de ejecución standalone de los binarios publicados
-Ejecución de `dotnet .\published\LAB10-TINTAMILER.API.dll` en puerto `5090` y consulta exitosa al endpoint `/health`.
-![Verificación Final](evidencias/parte-1-publicacion/12-verificacion-resultado-final.png)
+![Compilación en Release](evidencias/parte-1-publicacion/05-compilar-release.png)
 
----
+MSBuild produjo los cuatro ensamblados y terminó con cero advertencias y cero errores.
 
-### PARTE 2: DESPLIEGUE AUTOMÁTICO DESDE GITHUB CON GITHUB ACTIONS
+### 06. Kestrel en el puerto 5088
 
-#### Evidencia 13: Repositorio público oficial en GitHub
-Repositorio `https://github.com/MilerT/Lab-14-TintaMiler` sincronizado con el proyecto `LAB10-TINTAMILER`.
-![Repositorio GitHub](evidencias/parte-2-github-actions/13-repositorio-github.png)
+![Kestrel en el puerto 5088](evidencias/parte-1-publicacion/06-kestrel-local.png)
 
-#### Evidencia 14: Estructura del código subida a la rama main
-Visualización de los módulos Clean Architecture en GitHub tras el push.
-![Estructura Subida](evidencias/parte-2-github-actions/14-estructura-subida.png)
+El puerto en escucha y el JSON de salud identifican la instancia local.
 
-#### Evidencia 15: Archivo de workflow dotnet.yml
-Definición del pipeline automatizado en `.github/workflows/dotnet.yml`.
-![Archivo dotnet.yml](evidencias/parte-2-github-actions/15-archivo-dotnet-yml.png)
+### 07. Swagger en el navegador local
 
-#### Evidencia 16: Configuración del pipeline CI/CD
-Detalle de triggers en push a `main`, runner `ubuntu-latest` y acciones oficiales v4.
-![Configuración Workflow](evidencias/parte-2-github-actions/16-configuracion-workflow.png)
+![Swagger en el navegador local](evidencias/parte-1-publicacion/07-swagger-local.png)
 
-#### Evidencia 17: Registro del commit en Git
-Commit descriptivo en Windows PowerShell registrando los cambios del proyecto.
-![Commit Realizado](evidencias/parte-2-github-actions/17-commit-realizado.png)
+La página de inicio de la API presenta la documentación interactiva de la Ticketera.
 
-#### Evidencia 18: Push exitoso hacia origin main
-Publicación de ramas hacia el repositorio remoto en GitHub.
-![Push Exitoso](evidencias/parte-2-github-actions/18-push-exitoso.png)
+### 08. Perfil de publicación en carpeta
 
-#### Evidencia 19: Pestaña Actions en GitHub
-Historial de ejecuciones mostrando el workflow activo para `LAB10-TINTAMILER`.
-![Pestaña Actions](evidencias/parte-2-github-actions/19-pestana-actions.png)
+![Perfil de publicación en carpeta](evidencias/parte-1-publicacion/08-perfil-folder.png)
 
-#### Evidencia 20: Detalle de ejecución del workflow
-Runner de GitHub Actions procesando los 8 pasos secuenciales del pipeline.
-![Ejecución Workflow](evidencias/parte-2-github-actions/20-ejecucion-workflow.png)
+FolderProfile configura Release, net8.0 y la carpeta de destino del proyecto API.
 
-#### Evidencia 21: Log del paso Restore Dependencies
-El runner restaurando las dependencias de `LAB10-TINTAMILER.sln`.
-![Log Restore](evidencias/parte-2-github-actions/21-restauracion-dependencias.png)
+### 09. Publicación del paquete
 
-#### Evidencia 22: Log del paso Build Application (Release)
-Compilación limpia en Linux de las 4 capas de la solución.
-![Log Build](evidencias/parte-2-github-actions/22-compilacion-automatica.png)
+![Publicación del paquete](evidencias/parte-1-publicacion/09-publicar-folder.png)
 
-#### Evidencia 23: Log del paso Publish Application
-Generación de la carpeta `./published` en el entorno virtualizado.
-![Log Publish](evidencias/parte-2-github-actions/23-publicacion-automatica.png)
+dotnet publish aplicó el perfil y escribió los archivos en published/net8.0.
 
-#### Evidencia 24: Artefacto empaquetado para descarga
-Archivo zip `dotnet-published-app` (2.15 MB) resguardado con 7 días de retención.
-![Artefacto Generado](evidencias/parte-2-github-actions/24-artifact-generado.png)
+### 10. Archivos de distribución
 
-#### Evidencia 25: Workflow completado con éxito (Success)
-Checkmark verde confirmando la validación exitosa del pipeline CI/CD en 44 segundos.
-![Workflow Exitoso](evidencias/parte-2-github-actions/25-workflow-exitoso.png)
+![Archivos de distribución](evidencias/parte-1-publicacion/10-ensamblados-publicados.png)
 
----
+La salida incluye las cuatro DLL del proyecto, los archivos del host y el esquema SQL.
 
-### PARTE 3: DESPLIEGUE EN SERVIDOR CLOUD (RENDER)
+### 11. Manifiesto de runtime
 
-#### Evidencia 26: Dockerfile multi-stage adaptado para Clean Architecture
-Definición de 4 etapas compilando `DOMAIN`, `APPLICATION`, `INFRASTRUCTURE` y `API`.
-![Dockerfile](evidencias/parte-3-render/26-dockerfile.png)
+![Manifiesto de runtime](evidencias/parte-1-publicacion/11-runtime-publicado.png)
 
-#### Evidencia 27: Configuración de exclusiones y puertos del contenedor
-Archivo `.dockerignore` y variable de entorno `ASPNETCORE_HTTP_PORTS=8080`.
-![Configuración Contenedor](evidencias/parte-3-render/27-configuracion-contenedor.png)
+El archivo runtimeconfig.json identifica el TFM y los dos frameworks compartidos requeridos.
 
-#### Evidencia 28: Repositorio preparado con render.yaml
-Configuración de infraestructura como código (IaC) para Render.
-![Repositorio Preparado](evidencias/parte-3-render/28-repositorio-preparado-render.png)
+### 12. Ejecución desde la publicación
 
-#### Evidencia 29: Creación del nuevo Web Service en Render
-Selección de Web Service conectado a Docker y GitHub.
-![Creación Servicio](evidencias/parte-3-render/29-creacion-servicio-render.png)
+![Ejecución desde la publicación](evidencias/parte-1-publicacion/12-api-publicada.png)
 
-#### Evidencia 30: Conexión del repositorio MilerT/Lab-14-TintaMiler
-Vinculación autorizada de la cuenta de GitHub con Render.
-![Conexión Repositorio](evidencias/parte-3-render/30-conexion-repositorio.png)
+La instancia en el puerto 5090 responde al sondeo de salud y exige credenciales para consultar tickets.
 
-#### Evidencia 31: Parámetros del servicio en Render
-Nombre `lab10-tintamiler-api`, región Oregon y Health Check Path `/health`.
-![Configuración Servicio](evidencias/parte-3-render/31-configuracion-servicio.png)
+## Parte 2 · Integración continua con GitHub Actions
 
-#### Evidencia 32: Inicio del despliegue en Render
-Lanzamiento de la construcción tras detectar el commit en `main`.
-![Inicio Despliegue](evidencias/parte-3-render/32-inicio-despliegue.png)
+El push a main activó la ejecución 45109846828 para el commit d589200. Un runner Ubuntu restauró las dependencias, compiló las cuatro capas y publicó el proyecto API. La solución carece de proyectos de pruebas unitarias. La comprobación funcional se implementó con solicitudes HTTP al paquete publicado.
 
-#### Evidencia 33: Logs de compilación de imagen Docker
-Consola de logs de Render mostrando las etapas de construcción multi-stage.
-![Logs Despliegue](evidencias/parte-3-render/33-logs-despliegue.png)
+El runner inició PostgreSQL 18, aplicó TicketeraBD.sql y levantó la API. Comprobó el identificador de la aplicación, el documento OpenAPI y el rechazo de una petición sin token. También descargó dos libros Excel y validó la integridad ZIP de ambos.
 
-#### Evidencia 34: Estado del servicio en vivo (Live)
-Panel de control de Render mostrando estado en verde `Live`.
-![Despliegue Exitoso](evidencias/parte-3-render/34-despliegue-exitoso.png)
+GitHub conservó la salida en el artefacto ticketera-net8-release, de 7 035 336 bytes. La transferencia SCP del ejemplo de la guía se sustituyó por el artefacto descargable. Render obtiene el código directamente del repositorio.
 
-#### Evidencia 35: URL pública asignada con certificado SSL
-Dominio público `https://lab14-tintamiler.onrender.com` con HTTPS automático.
-![URL Pública](evidencias/parte-3-render/35-url-publica.png)
+```text
+git push origin main
+dotnet publish LAB10-TINTAMILER.API -c Release -f net8.0 --no-build -o published/net8.0
+```
 
-#### Evidencia 36: Swagger UI funcionando en producción en Render
-Documentación de la Ticketera API respondiendo en la nube.
-![Swagger en Render](evidencias/parte-3-render/36-aplicacion-funcionando-render.png)
+### 13. Repositorio del laboratorio
 
-#### Evidencia 37: Endpoint /health respondiendo en producción
-Telemetría JSON retornando código HTTP 200 `Healthy` con datos del estudiante Miler Andre Tinta Quispe (6C24-B).
-![Endpoint Health](evidencias/parte-3-render/37-endpoint-health.png)
+![Repositorio del laboratorio](evidencias/parte-2-github-actions/13-repositorio-github.png)
 
----
+GitHub muestra el repositorio que contiene el código de la Ticketera.
 
-## 5. RESULTADOS Y VERIFICACIÓN TÉCNICA
+### 14. Cambios preparados para integración
 
-| Métrica / Parámetro | Valor Obtenido | Estado |
-| :--- | :--- | :---: |
-| **Proyecto Desplegado** | `LAB10-TINTAMILER` (Clean Architecture) | Correcto |
-| **Sistema Operativo Local** | Windows 11 Enterprise (x64) | Verificado |
-| **Terminal de Comandos** | Windows PowerShell | Verificado |
-| **Tiempo de Restauración NuGet** | 0.42 s (4 capas) | Óptimo |
-| **Tiempo de Compilación Release** | 3.24 s | Óptimo |
-| **Duración del Pipeline CI/CD** | 44 segundos | Exitoso |
-| **Artefacto Compilado** | `dotnet-published-app` (2.15 MB) | Resguardado |
-| **Plataforma de Despliegue** | Render Cloud (Web Service Docker) | Live |
-| **Endpoint de Salud** | `/health` (Status 200 OK) | Operacional |
-| **Total de Evidencias Capturadas** | 37 capturas reales en Windows 11 | 100% Completado |
+![Cambios preparados para integración](evidencias/parte-2-github-actions/14-archivos-del-workflow.png)
 
----
+El diff del índice identifica el workflow, el SDK fijado y los archivos de despliegue.
 
-## 6. OBSERVACIONES TÉCNICAS
-1. **Desacoplamiento Clean Architecture:** La publicación manual en modo Release compila armónicamente las 4 capas (`API`, `APPLICATION`, `DOMAIN`, `INFRASTRUCTURE`) empaquetando solo binarios y librerías necesarias.
-2. **Entorno Windows 11 Nativo:** El uso de Windows PowerShell y Kestrel en Windows 11 permite verificar localmente el comportamiento en el puerto `5088` antes del empaquetado para la nube.
-3. **Optimización RyuJIT:** El compilador optimiza las llamadas a MediatR y Entity Framework Core, manteniendo un consumo de memoria liviano de ~54 MB.
-4. **GitHub Actions Multi-SDK:** El workflow compila sin problemas la solución en runners Ubuntu virtualizados preservando el artefacto descargable.
-5. **Caché de Capas en Docker:** El copiado selectivo de los archivos `.csproj` en el Dockerfile acelera sustancialmente las reconstrucciones en Render.
-6. **Observabilidad con Health Checks:** El endpoint `/health` y Swagger UI en la raíz ofrecen acceso directo tanto para usuarios como para sistemas de balanceo en la nube.
+### 15. Configuración del workflow
 
----
+![Configuración del workflow](evidencias/parte-2-github-actions/15-workflow-integracion.png)
 
-## 7. CONCLUSIONES ACADÉMICAS
-1. **Consolidación de Soluciones Multicapa:** `dotnet publish` empaqueta con éxito arquitecturas empresariales complejas sin perder referencias inter-proyecto.
-2. **Experiencia Profesional en Windows:** El desarrollo y publicación en Windows 11 proporciona una base sólida para flujos de trabajo DevOps modernos.
-3. **Calidad Continua con GitHub Actions:** La integración continua automática previene la integración de errores en ramas productivas.
-4. **Portabilidad Total:** Docker permite que un proyecto creado en Windows se ejecute de forma transparente en contenedores Linux en Render.
-5. **Filosofía GitOps:** La integración entre GitHub y Render permite despliegues ágiles y confiables con cero tiempo de caída.
-6. **Contratos de Salud:** Los endpoints `/health` son un estándar ineludible en el desarrollo de software empresarial contemporáneo.
+El workflow define el disparador en main, el runner Ubuntu, PostgreSQL y la compilación.
 
----
+### 16. Pruebas y distribución
 
-## 8. REFERENCIAS BIBLIOGRÁFICAS
-* Microsoft Learn. (2026). *Clean Architecture en ASP.NET Core*. Microsoft Docs.
-* GitHub Documentation. (2026). *GitHub Actions: Workflow syntax for GitHub Actions*.
-* Render Documentation. (2026). *Docker Web Services on Render*.
+![Pruebas y distribución](evidencias/parte-2-github-actions/16-pruebas-y-artefacto.png)
+
+La segunda mitad del workflow comprueba rutas HTTP y sube el paquete Release.
+
+### 17. Commit de la aplicación
+
+![Commit de la aplicación](evidencias/parte-2-github-actions/17-commit-aplicacion.png)
+
+Git registró la revisión d589200 con los cambios de publicación en .NET 8.
+
+### 18. Push de la rama principal
+
+![Push de la rama principal](evidencias/parte-2-github-actions/18-push-a-main.png)
+
+Git confirmó el avance de main en el remoto MilerT/Lab-14-TintaMiler.
+
+### 19. Pestaña Actions
+
+![Pestaña Actions](evidencias/parte-2-github-actions/19-acciones-en-github.png)
+
+La lista de workflows en GitHub permite localizar la ejecución correspondiente al push.
+
+### 20. Resumen de ejecución
+
+![Resumen de ejecución](evidencias/parte-2-github-actions/20-ejecucion-en-github.png)
+
+La página oficial de la ejecución 45109846828 muestra el trabajo y el artefacto asociados.
+
+### 21. Restauración en Ubuntu
+
+![Restauración en Ubuntu](evidencias/parte-2-github-actions/21-restauracion-runner.png)
+
+El registro descargado de GitHub documenta la restauración de los cuatro proyectos en el runner.
+
+### 22. Compilación automática
+
+![Compilación automática](evidencias/parte-2-github-actions/22-compilacion-runner.png)
+
+El log del runner presenta los ensamblados y el resultado de la compilación Release.
+
+### 23. Publicación automática
+
+![Publicación automática](evidencias/parte-2-github-actions/23-publicacion-runner.png)
+
+GitHub registró el comando de publicación y la ruta de salida en Linux.
+
+### 24. Artefacto descargable
+
+![Artefacto descargable](evidencias/parte-2-github-actions/24-artefacto-github.png)
+
+La API de GitHub confirma el nombre del artefacto, su identificador y su tamaño.
+
+### 25. Pruebas HTTP y archivos Excel
+
+![Pruebas HTTP y archivos Excel](evidencias/parte-2-github-actions/25-pruebas-http-del-runner.png)
+
+El log muestra 200 en salud y reportes, 401 en tickets y la comprobación de integridad de los libros.
+
+## Parte 3 · Despliegue en Render
+
+El Dockerfile usa una etapa SDK para restaurar y publicar, seguida de una etapa ASP.NET Core que ejecuta la DLL con el usuario app. Docker Desktop construyó la imagen Linux. Render validó el Blueprint y los recursos se crearon mediante su API oficial en el espacio MilerT.
+
+Se configuraron el servicio Docker lab10-tintamiler-api y una base PostgreSQL 18 privada, ambos en el plan gratuito de Oregón. El servicio toma la rama main, escucha en el puerto PORT asignado y usa /health. La inicialización opcional aplica las cinco tablas de TicketeraBD.sql en una transacción.
+
+Render informó live para el despliegue dep-dc1rpabl550s73fc4kog. La verificación externa siguió la redirección a Swagger, leyó el JSON de salud y abrió los tres libros entregados por los endpoints públicos. El reporte de tickets incluyó las hojas Resumen de Tickets y Detalle de Respuestas.
+
+```text
+docker build -t lab10-tintamiler:lab14 .
+render blueprints validate ./render.yaml -o text
+render deploys list srv-dc1rpa3l550s73fc4jk0 -o json
+```
+
+### 26. Dockerfile de la API
+
+![Dockerfile de la API](evidencias/parte-3-render/26-dockerfile.png)
+
+La etapa SDK publica la aplicación y la imagen de runtime ejecuta la DLL con el usuario app.
+
+### 27. Imagen Linux construida
+
+![Imagen Linux construida](evidencias/parte-3-render/27-imagen-docker.png)
+
+Docker inspeccionó la imagen local y confirmó el sistema operativo, el usuario y el puerto 8080.
+
+### 28. Validación del Blueprint
+
+![Validación del Blueprint](evidencias/parte-3-render/28-blueprint-validado.png)
+
+El CLI de Render validó render.yaml para el espacio de trabajo del laboratorio.
+
+### 29. Base PostgreSQL privada
+
+![Base PostgreSQL privada](evidencias/parte-3-render/29-postgres-en-render.png)
+
+Render identifica la base de datos gratuita en Oregón y su estado disponible.
+
+### 30. Origen del servicio web
+
+![Origen del servicio web](evidencias/parte-3-render/30-servicio-y-repositorio.png)
+
+La configuración remota vincula el servicio con el repositorio de GitHub y la rama main.
+
+### 31. Configuración en Render
+
+![Configuración en Render](evidencias/parte-3-render/31-configuracion-del-servicio.png)
+
+El servicio identifica el runtime Docker, el plan gratuito, la región, la URL y el sondeo de salud.
+
+### 32. Despliegue en curso
+
+![Despliegue en curso](evidencias/parte-3-render/32-despliegue-inicial.png)
+
+El registro de despliegues captura la actualización del servicio y el commit de origen.
+
+### 33. Registro de construcción remota
+
+![Registro de construcción remota](evidencias/parte-3-render/33-build-remoto.png)
+
+Los logs de Render muestran la exportación de capas y de la caché de construcción de Docker.
+
+### 34. Despliegue activo
+
+![Despliegue activo](evidencias/parte-3-render/34-render-en-vivo.png)
+
+Render marca live y devuelve el identificador del commit desplegado.
+
+### 35. Respuesta HTTPS pública
+
+![Respuesta HTTPS pública](evidencias/parte-3-render/35-verificacion-https.png)
+
+curl siguió la redirección a index.html y verificó el certificado TLS y la respuesta HTTP 200.
+
+### 36. Swagger en producción
+
+![Swagger en producción](evidencias/parte-3-render/36-swagger-publico.png)
+
+En la URL pública, Swagger despliega la operación de reportes de tickets con respuestas.
+
+### 37. Salud del servicio público
+
+![Salud del servicio público](evidencias/parte-3-render/37-health-publico.png)
+
+El navegador muestra el JSON obtenido directamente de /health en Render.
+
+### 38. Lectura de los tres reportes
+
+![Lectura de los tres reportes](evidencias/parte-3-render/38-reportes-desde-postgres.png)
+
+La comprobación externa descargó cada XLSX, verificó su estructura ZIP y leyó los nombres de sus hojas.
+
+## Resultados comprobados
+
+| Entorno | Resultado |
+|---|---|
+| Windows | SDK 8.0.424, compilación limpia y ejecución del paquete en 5090 |
+| GitHub | [Ejecución 45109846828](https://github.com/MilerT/Lab-14-TintaMiler/actions/runs/45109846828) completada con éxito, artefacto de 7 035 336 bytes |
+| Render | [Swagger](https://lab10-tintamiler-api.onrender.com/) y [salud](https://lab10-tintamiler-api.onrender.com/health) públicos, despliegue activo |
+| PostgreSQL y Excel | Los dos reportes de consulta y el ejemplo devolvieron XLSX válidos |
+
+La base gratuita tiene vencimiento el 22 de diciembre de 2026 a las 23:09 (Lima), según el valor expiresAt informado por Render.
+
+## Problemas y soluciones
+
+**Versión del proyecto.** La solución original apuntaba a net10.0. Se ajustaron los proyectos, el perfil de publicación, el workflow y las imágenes Docker para que el mismo código se ejecute con .NET 8.
+
+**Archivos en uso.** Durante una recompilación, Windows bloqueó DLL que Kestrel tenía abiertas. Se detuvo la instancia de prueba, se recompiló y se volvió a publicar. La compilación definitiva terminó con cero advertencias y cero errores.
+
+**Configuración sensible.** La configuración anterior incluía una clave JWT y una contraseña de PostgreSQL. Se retiraron del código y de appsettings.json. El desarrollo usa secretos de usuario y el servicio remoto recibe valores propios mediante variables de entorno.
+
+**Verificación de la nube.** El control visual del navegador se interrumpió. La creación de recursos se completó con la API de Render y su estado se consultó con el CLI. Las comprobaciones de Swagger, HTTPS y /health se hicieron contra la URL pública.
+
+## Observaciones
+
+1. El SDK seleccionado fue 8.0.424 aunque la máquina también tenía SDK 10.0. El manifiesto publicado solicita Microsoft.NETCore.App y Microsoft.AspNetCore.App de la familia 8.0.
+2. La publicación colocó en una sola carpeta la DLL de la API, los tres ensamblados de las demás capas, las dependencias y el esquema SQL. El arranque desde esa carpeta permitió probar la distribución independientemente de Rider.
+3. El log de compilación del runner registró cero advertencias y cero errores. El paso funcional distinguió una petición válida a /health (200) de una solicitud anónima a /api/tickets (401).
+4. GitHub identificó el artefacto de la ejecución con el número 14788289219 y registró su tamaño en bytes. El workflow lo conserva siete días.
+5. El proceso de Render alcanzó el estado live con el mismo commit evaluado por GitHub. La URL pública abrió Swagger por HTTPS y mostró los endpoints de la API de tickets.
+6. El endpoint de salud identifica el proceso. La descarga y apertura del reporte de usuarios y del reporte de tickets permitió verificar, además, el acceso a PostgreSQL y la generación de Excel.
+
+## Conclusiones
+
+1. Fijar el destino y la selección del SDK hizo reproducible la publicación de una solución que antes dependía de .NET 10. El resultado se ejecutó tanto en Windows como en Linux.
+2. Arrancar el paquete Release desde su carpeta de salida fue una comprobación más completa que la compilación aislada. Permitió verificar la carga de la aplicación y el comportamiento del middleware de autenticación.
+3. El runner de GitHub reprodujo la compilación en un entorno independiente. Incorporar PostgreSQL y peticiones HTTP permitió comprobar el funcionamiento de la API aun sin una suite de pruebas unitarias.
+4. El artefacto vincula un conjunto concreto de binarios con el commit que los produjo y permite recuperarlos durante la retención configurada. Esta distribución evita depender del servidor SCP de ejemplo.
+5. El contenedor y las variables de entorno permitieron desplegar las cuatro capas con una base privada propia. La configuración de Render mantuvo las credenciales fuera del código publicado.
+6. La evidencia conjunta de Git, los logs del runner, el estado de Render y los archivos Excel descargados permite rastrear el resultado desde el cambio de código hasta el comportamiento que observa una persona usuaria.
+
+## Referencias
+
+Guía de trabajo de TECSUP, PLAB-S14-JMAYHUA-2026-01, Laboratorio 14. [Repositorio de la Ticketera](https://github.com/MilerT/Lab-14-TintaMiler) · [Ejecución de GitHub Actions](https://github.com/MilerT/Lab-14-TintaMiler/actions/runs/45109846828) · [Servicio público de Render](https://lab10-tintamiler-api.onrender.com) · [Especificación de Blueprints](https://render.com/docs/blueprint-spec).

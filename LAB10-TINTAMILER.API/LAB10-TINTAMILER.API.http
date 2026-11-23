@@ -1,0 +1,6 @@
+@LAB10_TINTAMILER.API_HostAddress = http://localhost:5088
+
+GET {{LAB10_TINTAMILER.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

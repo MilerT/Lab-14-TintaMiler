@@ -1,0 +1,11 @@
+**/.git
+**/.github
+**/.vs
+**/.idea
+**/*.user
+**/*.suo
+**/bin
+**/obj
+**/published
+**/docs
+**/*.md

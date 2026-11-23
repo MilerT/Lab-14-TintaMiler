@@ -1,0 +1,4 @@
+{
+  "title": "Falla en acceso al servidor de base de datos",
+  "description": "El usuario no puede conectarse al servicio PostgreSQL desde la red local de la empresa."
+}

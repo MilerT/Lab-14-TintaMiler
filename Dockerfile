@@ -1,0 +1,28 @@
+# Stage 1: Runtime base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+WORKDIR /app
+EXPOSE 8080
+ENV ASPNETCORE_HTTP_PORTS=8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+# Stage 2: SDK build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY ["LAB10-TINTAMILER.DOMAIN/LAB10-TINTAMILER.DOMAIN.csproj", "LAB10-TINTAMILER.DOMAIN/"]
+COPY ["LAB10-TINTAMILER.APPLICATION/LAB10-TINTAMILER.APPLICATION.csproj", "LAB10-TINTAMILER.APPLICATION/"]
+COPY ["LAB10-TINTAMILER.INFRASTRUCTURE/LAB10-TINTAMILER.INFRASTRUCTURE.csproj", "LAB10-TINTAMILER.INFRASTRUCTURE/"]
+COPY ["LAB10-TINTAMILER.API/LAB10-TINTAMILER.API.csproj", "LAB10-TINTAMILER.API/"]
+RUN dotnet restore "LAB10-TINTAMILER.API/LAB10-TINTAMILER.API.csproj"
+COPY . .
+WORKDIR "/src/LAB10-TINTAMILER.API"
+RUN dotnet build "LAB10-TINTAMILER.API.csproj" -c Release -o /app/build
+
+# Stage 3: Publish
+FROM build AS publish
+RUN dotnet publish "LAB10-TINTAMILER.API.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Stage 4: Final container image
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "LAB10-TINTAMILER.API.dll"]

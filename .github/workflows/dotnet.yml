@@ -1,0 +1,46 @@
+name: Build and Deploy .NET Application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build, Test & Publish .NET Clean Architecture App
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    - name: Set up .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          8.0.x
+          10.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore LAB10-TINTAMILER.sln
+
+    - name: Build application (Release mode)
+      run: dotnet build LAB10-TINTAMILER.sln --configuration Release --no-restore
+
+    - name: Publish application
+      run: dotnet publish LAB10-TINTAMILER.API/LAB10-TINTAMILER.API.csproj --configuration Release --output ./published --no-build
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dotnet-published-app
+        path: ./published/
+        retention-days: 7
+
+    - name: Log Deployment Readiness
+      run: |
+        echo "=== VERIFICACIÓN DE PUBLICACIÓN COMPLETADA ==="
+        echo "Artefactos compilados listos para despliegue en Render."
+        ls -la ./published
